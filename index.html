@@ -43,7 +43,7 @@ Steps: <select id = steps>
     <option value="96" selected="selected">96</option>
 </select>
 <br>
-Resistance (Ω): <input type="number" name="resistance" id="resistance" value="7000"> <br>
+Resistance (Ω): <input  name="resistance" id="resistance" value="7000"> <br>
 <button type="button" onclick="RunConseq();">Series</button>
 <button type="button" onclick="RunParallel();">Parallel</button>
 <table id="resTable" class="blueTable">
@@ -72,7 +72,7 @@ function Prepare() {
             nomArray.push(item);
         }
     }
-    inputRes = document.getElementById("resistance").value;    
+    inputRes = parseK(document.getElementById("resistance").value);
 }
 
 function FillTable(data) {
@@ -81,6 +81,9 @@ function FillTable(data) {
         table.deleteRow(0);
     }
     for (i = 0; i < data.length; i++) {
+        if (data[i][2] != 0) {
+            data[i][2] = (data[i][2] / inputRes).toFixed(5) + '%';
+        }
         var newRow = table.insertRow();
         newRow.innerHTML = buildRow(data[i]);
     }
@@ -105,8 +108,9 @@ function Conseq(arr, target) {
     const bestMatchMax = 10;
     for (i = 0; i < nomLength; i++) {
         for (j = 0; j < nomLength; j++) {
+            if (arr[i] >= target || arr[j] >= target) { continue; } // some optimization
             var sum = arr[i]+arr[j];
-            var diff = Math.abs(target-sum);
+            var diff = sum-target;
             var element = [arr[i], arr[j], diff];
             if (diff == 0) {
                 exactMatches.push(element);
@@ -118,16 +122,16 @@ function Conseq(arr, target) {
             }
             var worstIndex = 0;                
             for (k = 1; k < bestMatchMax; k++) {
-                if (bestMatches[k][2] > bestMatches[worstIndex][2]) {
+                if (Math.abs(bestMatches[k][2]) > Math.abs(bestMatches[worstIndex][2])) {
                     worstIndex = k;
                 }
             }
-            if (diff < bestMatches[worstIndex][2]) {
+            if (Math.abs(diff) < Math.abs(bestMatches[worstIndex][2])) {
                 bestMatches[worstIndex]=element;
             }
         }
     }
-    bestMatches.sort(function(a,b) {return(a[2] - b[2])});
+    bestMatches.sort(function(a,b) {return(Math.abs(a[2]) - Math.abs(b[2]))});
     return exactMatches.concat(bestMatches);
 }
 
@@ -138,8 +142,9 @@ function Parallel(arr, target) {
     const bestMatchMax = 10;
     for (i = 0; i < nomLength; i++) {
         for (j = 0; j < nomLength; j++) {
+            if (arr[i] <= target || arr[j] <= target) { continue; } // some optimization
             var sum = arr[i]*arr[j] / (arr[i]+arr[j]);
-            var diff = Math.abs(target-sum);
+            var diff = sum-target;
             var element = [arr[i], arr[j], diff];
             if (diff == 0) {
                 exactMatches.push(element);
@@ -151,23 +156,45 @@ function Parallel(arr, target) {
             }
             var worstIndex = 0;                
             for (k = 1; k < bestMatchMax; k++) {
-                if (bestMatches[k][2] > bestMatches[worstIndex][2]) {
+                if (Math.abs(bestMatches[k][2]) > Math.abs(bestMatches[worstIndex][2])) {
                     worstIndex = k;
                 }
             }
-            if (diff < bestMatches[worstIndex][2]) {
+            if (Math.abs(diff) < Math.abs(bestMatches[worstIndex][2])) {
                 bestMatches[worstIndex]=element;
             }
         }
     }
-    bestMatches.sort(function(a,b) {return(a[2] - b[2])});
+    bestMatches.sort(function(a,b) {return(Math.abs(a[2]) - Math.abs(b[2]))});
     return exactMatches.concat(bestMatches);
+}
+
+function parseK(string) {    
+    var lowertrim = string.trim().toLowerCase();
+    var num = parseInt(lowertrim);
+    if (lowertrim.endsWith("k")) {
+        return num*1000;
+    }
+    if (lowertrim.endsWith("m")) {
+        return num*1000000;
+    }
+    return num;
+}
+
+function formatK(num) {    
+    if (num >= 1000000) {
+        return String(num/1000000) + 'M';
+    }
+    if (num >= 1000) {
+        return String(num/1000) + 'K';
+    }
+    return String(num);
 }
 
 function buildRow(dataArray) {
     var row ='';
     for (var i = 0; i < dataArray.length; i++) {
-        row += '<td>' + dataArray[i] + '</td>';
+        row += '<td>' + formatK(dataArray[i]) + '</td>';
     }
     return row;
 }
