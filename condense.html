@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<head>
+<title>condensor selection</title>
+<style>
+table.blueTable {
+  border: 1px solid #1C6EA4;
+  background-color: #EEEEEE;
+  width: 50%;
+  text-align: left;
+}
+table.blueTable td, table.blueTable th {
+  border: 1px solid #AAAAAA;
+  padding: 3px 2px;
+}
+table.blueTable tbody td {
+  font-size: 13px;
+}
+table.blueTable tr:nth-child(even) {
+  background: #D0E4F5;
+}
+table.blueTable thead {
+  background: #1C6EA4;
+  border-bottom: 2px solid #444444;
+}
+table.blueTable thead th {
+  font-size: 15px;
+  font-weight: bold;
+  color: #FFFFFF;
+  border-left: 2px solid #D0E4F5;
+}
+table.blueTable thead th:first-child {
+  border-left: none;
+}
+</style>
+</head>
+<body>
+Steps: <select id = steps>
+    <option value="3">3</option>
+    <option value="6">6</option>
+    <option value="12">12</option>
+    <option value="24" selected="selected">24</option>
+    <option value="48">48</option>
+    <option value="96">96</option>
+</select>
+<br>
+Capacity (F): <input  name="capacity" id="capacity" value="7u"> <br>
+<button type="button" onclick="RunConseq();">Series</button>
+<button type="button" onclick="RunParallel();">Parallel</button>
+<table id="capTable" class="blueTable">
+    <thead>
+    <tr>
+        <th>Res 1</th>
+        <th>Res 2</th>
+        <th>Diff</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+var nomArray = [];
+var inputCap = 0;
+var data = [];
+
+function Prepare() {
+    nomArray = [];
+    var stepCount = document.getElementById("steps").value;
+    const decimalPlaceCount = 8;
+    for (place = 0; place < decimalPlaceCount; place++) {
+        for (i = 0; i < stepCount; i++) {
+            var item = (Math.pow(10, (-1)*place) * Math.round(100*Math.pow(10, i/stepCount))/100);//.toPrecision(9);
+            nomArray.push(item);
+        }
+    }
+    inputCap = parseK(document.getElementById("capacity").value);
+}
+
+function FillTable(data) {
+    var table = document.getElementById("capTable").getElementsByTagName('tbody')[0];
+    while (table.rows.length > 0) {
+        table.deleteRow(0);
+    }
+    loop1:
+    for (i = 0; i < data.length; i++) {
+        if (data[i][2] != 0) {
+            data[i][2] = (data[i][2] / inputCap).toFixed(5) + '%';
+        }
+        var cont = false;
+        for (j = 0; j < i; j++) {
+                if (data[i][0]==data[j][1] && data[i][1]==data[j][0] ) {
+                    cont = true;
+                    continue;
+                }
+            }         
+        if (cont) { continue; }
+        var newRow = table.insertRow();
+        newRow.innerHTML = buildRow(data[i]);
+    }
+}
+
+function RunConseq() {
+    Prepare();
+    data = Conseq(nomArray, inputCap);
+    FillTable(data);
+}
+
+function RunParallel() {
+    Prepare();
+    data = Parallel(nomArray, inputCap);
+    FillTable(data);
+}
+
+function Parallel(arr, target) {
+    var nomLength = arr.length;
+    var exactMatches = [];
+    var bestMatches = [];
+    const bestMatchMax = 10;
+    for (i = 0; i < nomLength; i++) {
+        for (j = 0; j < nomLength; j++) {
+            if (arr[i] >= target || arr[j] >= target) { continue; } // some optimization
+            var sum = arr[i]+arr[j];
+            var diff = sum-target;
+            var element = [arr[i], arr[j], diff];
+            if (diff == 0) {
+                exactMatches.push(element);
+                continue;
+            }
+            if (bestMatches.length < bestMatchMax) {
+                bestMatches.push(element)
+                continue;
+            }
+            var worstIndex = 0;                
+            for (k = 1; k < bestMatchMax; k++) {
+                if (Math.abs(bestMatches[k][2]) > Math.abs(bestMatches[worstIndex][2])) {
+                    worstIndex = k;
+                }
+            }
+            if (Math.abs(diff) < Math.abs(bestMatches[worstIndex][2])) {
+                bestMatches[worstIndex]=element;
+            }
+        }
+    }
+    bestMatches.sort(function(a,b) {return(Math.abs(a[2]) - Math.abs(b[2]))});
+    return exactMatches.concat(bestMatches);
+}
+
+function Conseq(arr, target) {
+    var nomLength = arr.length;
+    var exactMatches = [];
+    var bestMatches = [];
+    const bestMatchMax = 10;
+    for (i = 0; i < nomLength; i++) {
+        for (j = 0; j < nomLength; j++) {
+            if (arr[i] <= target || arr[j] <= target) { continue; } // some optimization
+            var sum = arr[i]*arr[j] / (arr[i]+arr[j]);
+            var diff = sum-target;
+            var element = [arr[i], arr[j], diff];
+            if (diff == 0) {
+                exactMatches.push(element);
+                continue;
+            }
+            if (bestMatches.length < bestMatchMax) {
+                bestMatches.push(element)
+                continue;
+            }
+            var worstIndex = 0;                
+            for (k = 1; k < bestMatchMax; k++) {
+                if (Math.abs(bestMatches[k][2]) > Math.abs(bestMatches[worstIndex][2])) {
+                    worstIndex = k;
+                }
+            }
+            if (Math.abs(diff) < Math.abs(bestMatches[worstIndex][2])) {
+                bestMatches[worstIndex]=element;
+            }
+        }
+    }
+    bestMatches.sort(function(a,b) {return(Math.abs(a[2]) - Math.abs(b[2]))});
+    return exactMatches.concat(bestMatches);
+}
+
+function parseK(string) {    
+    var lowertrim = string.trim().toLowerCase();
+    var num = parseInt(lowertrim);
+    if (lowertrim.endsWith("m")) {
+        return num/1000;
+    }
+    if (lowertrim.endsWith("mm")||lowertrim.endsWith("u")||lowertrim.endsWith("mk")||lowertrim.endsWith("μ")||lowertrim.endsWith("µ")) {
+        return num/1000000;
+    }
+    return num;
+}
+
+function formatK(num) {    
+    if (num < 0.000001) {
+        return String(num*1000000) + 'μ';
+    }
+    if (num < 0.001) {
+        return String(num*1000) + 'm';
+    }
+    return String(num);
+}
+
+function buildRow(dataArray) {
+    var row ='';
+    for (var i = 0; i < dataArray.length; i++) {
+        row += '<td>' + formatK(dataArray[i]) + '</td>';
+    }
+    return row;
+}
+
+
+</script>
+</body>
