@@ -80,10 +80,19 @@ function FillTable(data) {
     while (table.rows.length > 0) {
         table.deleteRow(0);
     }
+    loop1:
     for (i = 0; i < data.length; i++) {
         if (data[i][2] != 0) {
             data[i][2] = (data[i][2] / inputRes).toFixed(5) + '%';
         }
+        var cont = false;
+        for (j = 0; j < i; j++) {
+                if (data[i][0]==data[j][1] && data[i][1]==data[j][0] ) {
+                    cont = true;
+                    continue;
+                }
+            }         
+        if (cont) { continue; }
         var newRow = table.insertRow();
         newRow.innerHTML = buildRow(data[i]);
     }
