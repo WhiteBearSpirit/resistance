@@ -34,28 +34,33 @@ table.blueTable thead th:first-child {
 </style>
 </head>
 <body>
-Steps: <select id = steps>
-    <option value="3">3</option>
-    <option value="6">6</option>
-    <option value="12">12</option>
-    <option value="24" selected="selected">24</option>
-    <option value="48">48</option>
-    <option value="96">96</option>
+<h3>condensor selection (<a href="index.html">looking for resistors?</a>)</h3> <br>
+<p>Steps: <select id = steps>
+    <option value="E3">E3</option>
+    <option value="E6">E6</option>
+    <option value="E12">E12</option>
+    <option value="E24" selected="selected">E24</option>
+    <option value="E48">E48</option>
+    <option value="E96">E96</option>
 </select>
-<br>
-Capacity (F): <input  name="capacity" id="capacity" value="7u"> <br>
+</p>
+<p>
+Capacity (F): <input  name="capacity" id="capacity" value="7n">
+</p>
+<p>
 <button type="button" onclick="RunConseq();">Series</button>
 <button type="button" onclick="RunParallel();">Parallel</button>
-<table id="capTable" class="blueTable">
+</p>
+<p><table id="capTable" class="blueTable">
     <thead>
     <tr>
-        <th>Res 1</th>
-        <th>Res 2</th>
-        <th>Diff</th>
+        <th>Cond 1, F</th>
+        <th>Cond 2, F</th>
+        <th>Diff, %</th>
     </tr>
     </thead>
     <tbody></tbody>
-</table>
+</table></p>
 
 <script>
 var nomArray = [];
@@ -64,15 +69,37 @@ var data = [];
 
 function Prepare() {
     nomArray = [];
+    singleStepArray = [];
+    inputCap = parseK(document.getElementById("capacity").value);
     var stepCount = document.getElementById("steps").value;
-    const decimalPlaceCount = 8;
+    const decimalPlaceCount = 12;
+    switch(stepCount) {
+        case "E3":
+        singleStepArray = [1, 2.2, 4.7];
+            break;
+        case "E6":
+        singleStepArray = [1, 1.5, 2.2, 3.3, 4.7, 6.8];
+            break;
+        case "E12":
+        singleStepArray = [1, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2];
+            break;            
+        case "E24":
+        singleStepArray = [1, 1.1, 1.2, 1.3, 1.5, 1.6, 1.8, 2.0, 2.2, 2.4, 2.7, 3.0, 3.3, 3.6, 3.9, 4.3, 4.7, 5.1, 5.6, 6.2, 6.8, 7.5, 8.2, 9.1];
+            break;
+        case "E48":
+        singleStepArray = [1,1.05,1.1,1.15,1.21,1.27,1.33,1.4,1.47,1.54,1.62,1.69,1.78,1.87,1.96,2.05,2.15,2.26,2.37,2.49,2.61,2.74,2.87,3.01,3.16,3.32,3.48,3.65,3.83,4.02,4.22,4.42,4.64,4.87,5.11,5.36,5.62,5.9,6.19,6.49,6.81,7.15,7.5,7.87,8.25,8.66,9.09,9.53];
+            break;
+        case "E96":
+        singleStepArray = [1.00,1.02,1.05,1.07,1.10,1.13,1.15,1.18,1.21,1.24,1.27,1.30,1.33,1.37,1.40,1.43,1.47,1.50,1.54,1.58,1.62,1.65,1.69,1.74,1.78,1.82,1.87,1.91,1.96,2.00,2.05,2.10,2.15,2.21,2.26,2.32,2.37,2.43,2.49,2.55,2.61,2.67,2.74,2.80,2.87,2.94,3.01,3.09,3.16,3.24,3.32,3.40,3.48,3.57,3.65,3.74,3.83,3.92,4.02,4.12,4.22,4.32,4.42,4.53,4.64,4.75,4.87,4.99,5.11,5.23,5.36,5.49,5.62,5.76,5.90,6.04,6.19,6.34,6.49,6.65,6.81,6.98,7.15,7.32,7.50,7.68,7.87,8.06,8.25,8.45,8.66,8.87,9.09,9.31,9.53,9.76];
+            break;
+        default:
+    }
     for (place = 0; place < decimalPlaceCount; place++) {
-        for (i = 0; i < stepCount; i++) {
-            var item = (Math.pow(10, (-1)*place) * Math.round(100*Math.pow(10, i/stepCount))/100);//.toPrecision(9);
+        for (i = 0; i < singleStepArray.length; i++) {
+            var item = (Math.pow(10, (-1)*place) * singleStepArray[i] / 10);
             nomArray.push(item);
         }
-    }
-    inputCap = parseK(document.getElementById("capacity").value);
+    }  
 }
 
 function FillTable(data) {
@@ -80,10 +107,9 @@ function FillTable(data) {
     while (table.rows.length > 0) {
         table.deleteRow(0);
     }
-    loop1:
     for (i = 0; i < data.length; i++) {
         if (data[i][2] != 0) {
-            data[i][2] = (data[i][2] / inputCap).toFixed(5) + '%';
+            data[i][2] = formatNum(100 * data[i][2] / inputCap) + '%';
         }
         var cont = false;
         for (j = 0; j < i; j++) {
@@ -118,8 +144,8 @@ function Parallel(arr, target) {
     for (i = 0; i < nomLength; i++) {
         for (j = 0; j < nomLength; j++) {
             if (arr[i] >= target || arr[j] >= target) { continue; } // some optimization
-            var sum = arr[i]+arr[j];
-            var diff = sum-target;
+            var sum = (arr[i]+arr[j]).toPrecision(5);
+            var diff = (sum-target);
             var element = [arr[i], arr[j], diff];
             if (diff == 0) {
                 exactMatches.push(element);
@@ -129,7 +155,7 @@ function Parallel(arr, target) {
                 bestMatches.push(element)
                 continue;
             }
-            var worstIndex = 0;                
+            var worstIndex = 0;
             for (k = 1; k < bestMatchMax; k++) {
                 if (Math.abs(bestMatches[k][2]) > Math.abs(bestMatches[worstIndex][2])) {
                     worstIndex = k;
@@ -152,8 +178,8 @@ function Conseq(arr, target) {
     for (i = 0; i < nomLength; i++) {
         for (j = 0; j < nomLength; j++) {
             if (arr[i] <= target || arr[j] <= target) { continue; } // some optimization
-            var sum = arr[i]*arr[j] / (arr[i]+arr[j]);
-            var diff = sum-target;
+            var sum = (arr[i]*arr[j] / (arr[i]+arr[j]));
+            var diff = (sum-target).toPrecision(5);
             var element = [arr[i], arr[j], diff];
             if (diff == 0) {
                 exactMatches.push(element);
@@ -180,24 +206,41 @@ function Conseq(arr, target) {
 
 function parseK(string) {    
     var lowertrim = string.trim().toLowerCase();
-    var num = parseInt(lowertrim);
-    if (lowertrim.endsWith("m")) {
-        return num/1000;
+    var num = parseFloat(lowertrim);
+    if (lowertrim.endsWith("p")) {
+        return num/1000000000000;
+    }
+    if (lowertrim.endsWith("n")) {
+        return num/1000000000;
     }
     if (lowertrim.endsWith("mm")||lowertrim.endsWith("u")||lowertrim.endsWith("mk")||lowertrim.endsWith("μ")||lowertrim.endsWith("µ")) {
         return num/1000000;
     }
+    if (lowertrim.endsWith("m")) {
+        return num/1000;
+    }
     return num;
 }
 
-function formatK(num) {    
+function formatK(num) {
+    if (num == 0) { return '0'; }
+    if (num < 0.000000001) {
+        return formatNum(num*1000000000000) + 'p';
+    }
     if (num < 0.000001) {
-        return String(num*1000000) + 'μ';
+        return formatNum(num*1000000000) + 'n';
     }
     if (num < 0.001) {
-        return String(num*1000) + 'm';
+        return formatNum(num*1000000) + 'μ';
+    }
+    if (num < 1) {
+        return formatNum(num*1000) + 'm';
     }
     return String(num);
+}
+
+function formatNum(num) {
+    return parseFloat(num.toPrecision(3));
 }
 
 function buildRow(dataArray) {
